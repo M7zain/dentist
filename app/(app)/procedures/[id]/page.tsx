@@ -2,10 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowRight, CheckCircle2, Plus } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedPage } from "@/components/animated-page";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ProcedureSkeleton } from "@/components/page-skeletons";
 import { ToothChart } from "@/components/tooth-chart";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -37,21 +45,35 @@ type ProcedureDetail = {
 
 export default function ProcedurePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [procedure, setProcedure] = useState<ProcedureDetail | null>(null);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editSession, setEditSession] = useState<SessionRecord | null>(null);
+  const [deleteSession, setDeleteSession] = useState<SessionRecord | null>(null);
   const [notes, setNotes] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [sessionDate, setSessionDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
   const [teeth, setTeeth] = useState<number[]>([]);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
   const previousTeeth = useMemo(
-    () => Array.from(new Set(sessions.flatMap((s) => s.teeth || []))),
-    [sessions]
+    () =>
+      Array.from(
+        new Set(
+          sessions
+            .filter((s) => s.id !== editSession?.id)
+            .flatMap((s) => s.teeth || [])
+        )
+      ),
+    [sessions, editSession]
   );
 
   async function load() {
@@ -64,6 +86,8 @@ export default function ProcedurePage() {
     }
     setProcedure(data.procedure);
     setSessions(data.sessions);
+    setEditName(data.procedure.name);
+    setEditPrice(String(data.procedure.total_price));
     setInitialLoading(false);
   }
 
@@ -71,6 +95,21 @@ export default function ProcedurePage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  function resetSessionForm() {
+    setNotes("");
+    setAmountPaid("");
+    setSessionDate(new Date().toISOString().slice(0, 10));
+    setTeeth([]);
+  }
+
+  function openSessionEditor(session: SessionRecord) {
+    setEditSession(session);
+    setNotes(session.notes || "");
+    setAmountPaid(String(session.amount_paid));
+    setSessionDate(String(session.session_date).slice(0, 10));
+    setTeeth(session.teeth || []);
+  }
 
   async function addSession(e: React.FormEvent) {
     e.preventDefault();
@@ -93,12 +132,104 @@ export default function ProcedurePage() {
       }
       toast.success("تمت إضافة الجلسة");
       setOpen(false);
-      setNotes("");
-      setAmountPaid("");
-      setTeeth([]);
+      resetSessionForm();
       await load();
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function updateSession(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editSession) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/sessions/${editSession.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notes,
+          amount_paid: Number(amountPaid || 0),
+          teeth,
+          session_date: sessionDate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل تحديث الجلسة");
+        return;
+      }
+      toast.success("تم تحديث الجلسة");
+      setEditSession(null);
+      resetSessionForm();
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removeSession() {
+    if (!deleteSession) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/sessions/${deleteSession.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل حذف الجلسة");
+        return;
+      }
+      toast.success("تم حذف الجلسة");
+      setDeleteSession(null);
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateProcedure(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/procedures/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName,
+          total_price: Number(editPrice),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل التحديث");
+        return;
+      }
+      toast.success("تم تحديث الإجراء");
+      setEditOpen(false);
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removeProcedure() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/procedures/${params.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل الحذف");
+        return;
+      }
+      toast.success("تم حذف الإجراء");
+      router.push(`/patients/${data.patient_id || procedure?.patient_id}`);
+      router.refresh();
+    } finally {
+      setLoading(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -116,6 +247,20 @@ export default function ProcedurePage() {
     await load();
   }
 
+  async function reopenProcedure() {
+    const res = await fetch(`/api/procedures/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reopen" }),
+    });
+    if (!res.ok) {
+      toast.error("تعذر إعادة فتح الإجراء");
+      return;
+    }
+    toast.success("تم إعادة فتح الإجراء");
+    await load();
+  }
+
   if (initialLoading) {
     return <ProcedureSkeleton />;
   }
@@ -127,6 +272,8 @@ export default function ProcedurePage() {
       </div>
     );
   }
+
+  const isActive = procedure.status === "active";
 
   return (
     <AnimatedPage>
@@ -147,10 +294,8 @@ export default function ProcedurePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-3xl font-extrabold">{procedure.name}</h1>
-                <Badge
-                  variant={procedure.status === "finished" ? "secondary" : "default"}
-                >
-                  {procedure.status === "finished" ? "مكتمل" : "نشط"}
+                <Badge variant={isActive ? "default" : "secondary"}>
+                  {isActive ? "نشط" : "مكتمل"}
                 </Badge>
               </div>
               <p className="mt-1 text-muted-foreground">
@@ -158,7 +303,57 @@ export default function ProcedurePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {procedure.status === "active" && (
+              <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogTrigger
+                  className={cn(
+                    buttonVariants({ variant: "outline", className: "gap-2" })
+                  )}
+                >
+                  <Pencil className="size-4" />
+                  تعديل
+                </DialogTrigger>
+                <DialogContent dir="rtl">
+                  <DialogHeader>
+                    <DialogTitle>تعديل الإجراء</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={updateProcedure} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>اسم الإجراء</Label>
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>السعر الإجمالي</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        dir="ltr"
+                        className="text-left"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      حفظ التعديلات
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                حذف
+              </Button>
+
+              {isActive ? (
                 <>
                   <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger
@@ -231,6 +426,11 @@ export default function ProcedurePage() {
                     إنهاء الإجراء
                   </Button>
                 </>
+              ) : (
+                <Button variant="outline" className="gap-2" onClick={reopenProcedure}>
+                  <RotateCcw className="size-4" />
+                  إعادة فتح
+                </Button>
               )}
             </div>
           </div>
@@ -273,12 +473,9 @@ export default function ProcedurePage() {
       <div className="anim-block space-y-3">
         <h2 className="text-xl font-bold">سجل الجلسات</h2>
         {sessions.map((session) => (
-          <div
-            key={session.id}
-            className="rounded-2xl border bg-card/80 p-5"
-          >
+          <div key={session.id} className="rounded-2xl border bg-card/80 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-bold" dir="ltr">
                   {String(session.session_date).slice(0, 10)}
                 </p>
@@ -295,9 +492,33 @@ export default function ProcedurePage() {
                   </div>
                 )}
               </div>
-              <p className="text-lg font-extrabold text-primary">
-                {formatCurrency(Number(session.amount_paid))}
-              </p>
+              <div className="flex flex-col items-end gap-2">
+                <p className="text-lg font-extrabold text-primary">
+                  {formatCurrency(Number(session.amount_paid))}
+                </p>
+                {isActive && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => openSessionEditor(session)}
+                    >
+                      <Pencil className="size-3.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => setDeleteSession(session)}
+                    >
+                      <Trash2 className="size-3.5" />
+                      حذف
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -307,6 +528,89 @@ export default function ProcedurePage() {
           </div>
         )}
       </div>
+
+      <Dialog
+        open={!!editSession}
+        onOpenChange={(next) => {
+          if (!next) {
+            setEditSession(null);
+            resetSessionForm();
+          }
+        }}
+      >
+        <DialogContent
+          dir="rtl"
+          className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        >
+          <DialogHeader>
+            <DialogTitle>تعديل الجلسة</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={updateSession} className="space-y-4">
+            <div className="space-y-2">
+              <Label>تاريخ الجلسة</Label>
+              <Input
+                type="date"
+                dir="ltr"
+                value={sessionDate}
+                onChange={(e) => setSessionDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>المبلغ المدفوع</Label>
+              <Input
+                type="number"
+                min="0"
+                dir="ltr"
+                className="text-left"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات الجلسة</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>الأسنان المعالجة</Label>
+              <ToothChart
+                selected={teeth}
+                onChange={setTeeth}
+                previouslyWorked={previousTeeth}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              حفظ التعديلات
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="حذف الإجراء"
+        description="سيتم حذف الإجراء وجميع جلساته نهائياً."
+        confirmLabel="حذف الإجراء"
+        loading={loading}
+        destructive
+        onConfirm={removeProcedure}
+      />
+
+      <ConfirmDialog
+        open={!!deleteSession}
+        onOpenChange={(next) => !next && setDeleteSession(null)}
+        title="حذف الجلسة"
+        description="سيتم حذف هذه الجلسة نهائياً وسيتغير المبلغ المدفوع والمتبقي."
+        confirmLabel="حذف الجلسة"
+        loading={loading}
+        destructive
+        onConfirm={removeSession}
+      />
     </AnimatedPage>
   );
 }

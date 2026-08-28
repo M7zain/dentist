@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { ArrowRight, MessageCircle, Plus } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowRight, MessageCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatedPage } from "@/components/animated-page";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PatientDetailSkeleton } from "@/components/page-skeletons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,11 +25,16 @@ import type { Patient, ProcedureWithTotals } from "@/lib/types";
 
 export default function PatientDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [procedures, setProcedures] = useState<ProcedureWithTotals[]>([]);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [name, setName] = useState("");
   const [totalPrice, setTotalPrice] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -42,6 +48,8 @@ export default function PatientDetailPage() {
     }
     setPatient(data.patient);
     setProcedures(data.procedures);
+    setEditName(data.patient.name);
+    setEditPhone(data.patient.phone.replace(/^\+963/, ""));
     setInitialLoading(false);
   }
 
@@ -74,6 +82,46 @@ export default function PatientDetailPage() {
       await load();
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function updatePatient(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/patients/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName, phone: editPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل التحديث");
+        return;
+      }
+      toast.success("تم تحديث بيانات المريض");
+      setEditOpen(false);
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deletePatient() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/patients/${params.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل الحذف");
+        return;
+      }
+      toast.success("تم حذف المريض");
+      router.push("/patients");
+      router.refresh();
+    } finally {
+      setLoading(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -122,6 +170,54 @@ export default function PatientDetailPage() {
               <MessageCircle className="size-4" />
               واتساب مباشرة
             </a>
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+              <DialogTrigger
+                className={cn(buttonVariants({ variant: "outline", className: "gap-2" }))}
+              >
+                <Pencil className="size-4" />
+                تعديل
+              </DialogTrigger>
+              <DialogContent dir="rtl" className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>تعديل بيانات المريض</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={updatePatient} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>اسم المريض</Label>
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>رقم الهاتف</Label>
+                    <div className="flex gap-2" dir="ltr">
+                      <span className="inline-flex items-center rounded-xl border bg-secondary px-3 text-sm font-semibold text-primary">
+                        +963
+                      </span>
+                      <Input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="text-left"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    حفظ التعديلات
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              حذف
+            </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger
                 className={cn(buttonVariants({ className: "gap-2" }))}
@@ -218,6 +314,17 @@ export default function PatientDetailPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="حذف المريض"
+        description="سيتم حذف المريض وجميع إجراءاته وجلساته نهائياً. لا يمكن التراجع عن هذا الإجراء."
+        confirmLabel="حذف المريض"
+        loading={loading}
+        destructive
+        onConfirm={deletePatient}
+      />
     </AnimatedPage>
   );
 }

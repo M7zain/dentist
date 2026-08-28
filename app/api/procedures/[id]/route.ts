@@ -114,3 +114,23 @@ export async function PATCH(
     return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireSession();
+    const { id } = await params;
+    const procedureId = Number(id);
+    const procedure = await getOwnedProcedure(procedureId, session.id);
+    if (!procedure) {
+      return NextResponse.json({ error: "الإجراء غير موجود" }, { status: 404 });
+    }
+
+    await query("DELETE FROM procedures WHERE id = :id", { id: procedureId });
+    return NextResponse.json({ ok: true, patient_id: procedure.patient_id });
+  } catch {
+    return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+  }
+}

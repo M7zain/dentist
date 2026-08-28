@@ -7,12 +7,18 @@ import { SettingsSkeleton } from "@/components/page-skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/format";
 
 export default function SettingsPage() {
   const [percentage, setPercentage] = useState("30");
   const [preview, setPreview] = useState(100000);
-  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loadingClinic, setLoadingClinic] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
@@ -21,14 +27,16 @@ export default function SettingsPage() {
       .then((data) => {
         if (data.dentist) {
           setPercentage(String(data.dentist.clinic_percentage));
+          setName(data.dentist.name || "");
+          setUsername(data.dentist.username || "");
         }
       })
       .finally(() => setInitialLoading(false));
   }, []);
 
-  async function save(e: React.FormEvent) {
+  async function saveClinic(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setLoadingClinic(true);
     try {
       const res = await fetch("/api/settings", {
         method: "PATCH",
@@ -42,7 +50,35 @@ export default function SettingsPage() {
       }
       toast.success("تم حفظ نسبة العيادة");
     } finally {
-      setLoading(false);
+      setLoadingClinic(false);
+    }
+  }
+
+  async function saveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setLoadingProfile(true);
+    try {
+      const payload: Record<string, string> = { name, username };
+      if (newPassword) {
+        payload.current_password = currentPassword;
+        payload.new_password = newPassword;
+      }
+
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "فشل الحفظ");
+        return;
+      }
+      toast.success("تم تحديث الملف الشخصي");
+      setCurrentPassword("");
+      setNewPassword("");
+    } finally {
+      setLoadingProfile(false);
     }
   }
 
@@ -59,14 +95,86 @@ export default function SettingsPage() {
       <div className="anim-block">
         <h1 className="text-3xl font-extrabold">الإعدادات</h1>
         <p className="mt-1 text-muted-foreground">
-          ضبط نسبة العيادة وتقسيم الإيرادات بين الطبيب والعيادة
+          إدارة الملف الشخصي ونسبة العيادة
         </p>
       </div>
 
       <form
-        onSubmit={save}
+        onSubmit={saveProfile}
         className="anim-block max-w-xl space-y-5 rounded-3xl border bg-card/80 p-6"
       >
+        <div>
+          <h2 className="text-lg font-bold">الملف الشخصي</h2>
+          <p className="text-sm text-muted-foreground">
+            تحديث اسم الطبيب واسم المستخدم وكلمة المرور
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>الاسم</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>اسم المستخدم</Label>
+          <Input
+            dir="ltr"
+            className="text-left"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <Label>كلمة المرور الحالية</Label>
+          <Input
+            type="password"
+            dir="ltr"
+            className="text-left"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="مطلوبة فقط عند تغيير كلمة المرور"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>كلمة مرور جديدة</Label>
+          <Input
+            type="password"
+            dir="ltr"
+            className="text-left"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="اتركها فارغة إن لم ترد التغيير"
+          />
+        </div>
+
+        <Button type="submit" disabled={loadingProfile} className="w-full">
+          حفظ الملف الشخصي
+        </Button>
+      </form>
+
+      <form
+        onSubmit={saveClinic}
+        className="anim-block max-w-xl space-y-5 rounded-3xl border bg-card/80 p-6"
+      >
+        <div>
+          <h2 className="text-lg font-bold">نسبة العيادة</h2>
+          <p className="text-sm text-muted-foreground">
+            ضبط تقسيم الإيرادات بين الطبيب والعيادة
+          </p>
+        </div>
+
         <div className="space-y-2">
           <Label>نسبة العيادة (%)</Label>
           <Input
@@ -112,8 +220,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
-          حفظ الإعدادات
+        <Button type="submit" disabled={loadingClinic} className="w-full">
+          حفظ نسبة العيادة
         </Button>
       </form>
     </AnimatedPage>
