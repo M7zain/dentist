@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:setup": "node scripts/setup-db.mjs",
-    "calibrate:teeth": "node scripts/calibrate-teeth.mjs"
+    "calibrate:teeth": "node scripts/calibrate-teeth.mjs",
+    "calibrate:odontogram": "node scripts/calibrate-odontogram.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -25,7 +26,9 @@
     "next-themes": "^0.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-odontogram": "^0.5.6",
     "recharts": "^3.8.0",
+    "react-odontogram": "^0.5.6",
     "shadcn": "^4.19.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",

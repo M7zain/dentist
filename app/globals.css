@@ -101,3 +101,43 @@
     @apply font-sans;
   }
 }
+
+/* react-odontogram — white teeth, transparent background, clinic selection colors */
+.clinic-odontogram .Odontogram {
+  --dark-blue: #0f766e;
+  --base-blue: #64748b;
+  --light-blue: rgba(20, 184, 166, 0.92);
+}
+
+.clinic-odontogram .Odontogram svg {
+  background: transparent !important;
+  color: #64748b;
+}
+
+.clinic-odontogram .Odontogram svg path:nth-of-type(2) {
+  fill: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.clinic-odontogram .Odontogram g[class^="teeth-"] path:first-of-type {
+  stroke: #475569;
+  stroke-width: 1.75;
+}
+
+.clinic-odontogram .Odontogram g.selected path:nth-of-type(2) {
+  fill: rgba(20, 184, 166, 0.92) !important;
+  opacity: 1 !important;
+}
+
+.clinic-odontogram .Odontogram g.selected {
+  color: #0f766e;
+}
+
+.clinic-odontogram .Odontogram g[class^="teeth-"]:hover path:nth-of-type(2) {
+  fill: rgba(20, 184, 166, 0.35) !important;
+  opacity: 1 !important;
+}
+
+.clinic-odontogram .Odontogram svg path[data-colored="true"] {
+  opacity: 1 !important;
+}
