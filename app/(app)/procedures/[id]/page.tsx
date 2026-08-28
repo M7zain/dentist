@@ -362,10 +362,7 @@ export default function ProcedurePage() {
                       <Plus className="size-4" />
                       جلسة جديدة
                     </DialogTrigger>
-                    <DialogContent
-                      dir="rtl"
-                      className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
-                    >
+                    <DialogContent dir="rtl" className="sm:max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>إضافة جلسة علاجية</DialogTitle>
                       </DialogHeader>
@@ -538,10 +535,7 @@ export default function ProcedurePage() {
           }
         }}
       >
-        <DialogContent
-          dir="rtl"
-          className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
-        >
+        <DialogContent dir="rtl" className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>تعديل الجلسة</DialogTitle>
           </DialogHeader>
