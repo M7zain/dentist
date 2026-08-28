@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { AnimatedPage } from "@/components/animated-page";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { SessionDialogForm } from "@/components/session-dialog-form";
 import { ProcedureSkeleton } from "@/components/page-skeletons";
 import { ToothChart } from "@/components/tooth-chart";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -275,6 +276,52 @@ export default function ProcedurePage() {
 
   const isActive = procedure.status === "active";
 
+  const sessionFields = (
+    <>
+      <div className="space-y-2">
+        <Label>تاريخ الجلسة</Label>
+        <Input
+          type="date"
+          dir="ltr"
+          value={sessionDate}
+          onChange={(e) => setSessionDate(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>المبلغ المدفوع في هذه الجلسة</Label>
+        <Input
+          type="number"
+          min="0"
+          dir="ltr"
+          className="text-left"
+          value={amountPaid}
+          onChange={(e) => setAmountPaid(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          المتبقي حالياً: {formatCurrency(procedure.remaining)}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label>ملاحظات الجلسة</Label>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="ملاحظات الطبيب عن الجلسة..."
+          rows={3}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>اختيار الأسنان المعالجة</Label>
+        <ToothChart
+          selected={teeth}
+          onChange={setTeeth}
+          previouslyWorked={previousTeeth}
+        />
+      </div>
+    </>
+  );
+
   return (
     <AnimatedPage>
       <div className="anim-block">
@@ -362,57 +409,14 @@ export default function ProcedurePage() {
                       <Plus className="size-4" />
                       جلسة جديدة
                     </DialogTrigger>
-                    <DialogContent dir="rtl" className="sm:max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>إضافة جلسة علاجية</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={addSession} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>تاريخ الجلسة</Label>
-                          <Input
-                            type="date"
-                            dir="ltr"
-                            value={sessionDate}
-                            onChange={(e) => setSessionDate(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>المبلغ المدفوع في هذه الجلسة</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            dir="ltr"
-                            className="text-left"
-                            value={amountPaid}
-                            onChange={(e) => setAmountPaid(e.target.value)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            المتبقي حالياً: {formatCurrency(procedure.remaining)}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>ملاحظات الجلسة</Label>
-                          <Textarea
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="ملاحظات الطبيب عن الجلسة..."
-                            rows={3}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>اختيار الأسنان المعالجة</Label>
-                          <ToothChart
-                            selected={teeth}
-                            onChange={setTeeth}
-                            previouslyWorked={previousTeeth}
-                          />
-                        </div>
-                        <Button type="submit" className="w-full" disabled={loading}>
-                          حفظ الجلسة
-                        </Button>
-                      </form>
-                    </DialogContent>
+                    <SessionDialogForm
+                      title="إضافة جلسة علاجية"
+                      submitLabel="حفظ الجلسة"
+                      loading={loading}
+                      onSubmit={addSession}
+                    >
+                      {sessionFields}
+                    </SessionDialogForm>
                   </Dialog>
                   <Button
                     variant="secondary"
@@ -535,53 +539,14 @@ export default function ProcedurePage() {
           }
         }}
       >
-        <DialogContent dir="rtl" className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>تعديل الجلسة</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={updateSession} className="space-y-4">
-            <div className="space-y-2">
-              <Label>تاريخ الجلسة</Label>
-              <Input
-                type="date"
-                dir="ltr"
-                value={sessionDate}
-                onChange={(e) => setSessionDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>المبلغ المدفوع</Label>
-              <Input
-                type="number"
-                min="0"
-                dir="ltr"
-                className="text-left"
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>ملاحظات الجلسة</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>الأسنان المعالجة</Label>
-              <ToothChart
-                selected={teeth}
-                onChange={setTeeth}
-                previouslyWorked={previousTeeth}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              حفظ التعديلات
-            </Button>
-          </form>
-        </DialogContent>
+        <SessionDialogForm
+          title="تعديل الجلسة"
+          submitLabel="حفظ التعديلات"
+          loading={loading}
+          onSubmit={updateSession}
+        >
+          {sessionFields}
+        </SessionDialogForm>
       </Dialog>
 
       <ConfirmDialog

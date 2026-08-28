@@ -104,7 +104,8 @@ export function AppShell({
 
       {/* Floating bottom app bar — mobile */}
       <div
-        className="fixed inset-x-0 bottom-0 z-[100] md:hidden"
+        data-mobile-app-bar
+        className="fixed inset-x-0 bottom-0 z-50 md:hidden"
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
         <nav

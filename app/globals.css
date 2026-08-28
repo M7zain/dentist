@@ -141,3 +141,13 @@
 .clinic-odontogram .Odontogram svg path[data-colored="true"] {
   opacity: 1 !important;
 }
+
+@media (max-width: 767px) {
+  body:has([data-slot="dialog-overlay"][data-open]) [data-mobile-app-bar] {
+    display: none;
+  }
+}
+
+.session-dialog[data-slot="dialog-content"] {
+  padding-bottom: 0;
+}
